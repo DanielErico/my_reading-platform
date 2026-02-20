@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Danny's Reading Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+
+<body>
+
+    <!-- Setup Modal -->
+    <div id="apiKeyModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-icon">📖</div>
+            <h2>Welcome to ReadSpace</h2>
+            <p class="modal-desc">Set up your personal reading platform in seconds.</p>
+
+            <!-- Username -->
+            <div class="form-group">
+                <label class="form-label">Your Name <span class="required">*</span></label>
+                <input type="text" id="usernameInput" placeholder="e.g. Danny" maxlength="30" />
+            </div>
+
+            <!-- Profile Picture -->
+            <div class="form-group">
+                <label class="form-label">Profile Picture <span class="optional">(optional)</span></label>
+                <div class="avatar-upload-row">
+                    <div class="avatar-preview" id="avatarPreview">
+                        <span id="avatarInitial">?</span>
+                        <img id="avatarImg" src="" alt="" style="display:none;" />
+                    </div>
+                    <label class="avatar-upload-btn" for="avatarInput">
+                        📷 Choose Photo
+                        <input type="file" id="avatarInput" accept="image/*" hidden />
+                    </label>
+                    <button type="button" id="removeAvatar" class="avatar-remove hidden">✕ Remove</button>
+                </div>
+            </div>
+
+            <!-- API Key -->
+            <div class="form-group">
+                <label class="form-label">
+                    Groq API Key <span class="required">*</span>
+                    <a href="https://console.groq.com/keys" target="_blank" class="get-key-link">Get free key ↗</a>
+                </label>
+                <input type="password" id="apiKeyInput" placeholder="gsk_xxxxxxxxxxxxxxxx..." />
+            </div>
+
+            <button id="saveApiKey" class="btn-primary" style="width:100%;margin-top:8px;">
+                Let's Go 🚀
+            </button>
+            <p class="modal-note">All data is stored locally in your browser only.</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="main-header">
+        <div class="header-left">
+            <!-- Profile Avatar beside greeting -->
+            <div class="header-avatar" id="headerAvatar">
+                <span id="headerAvatarInitial">?</span>
+                <img id="headerAvatarImg" src="" alt="" style="display:none;" />
+            </div>
+            <div>
+                <h1 class="greeting">Hello <span id="greetingName">there</span><span class="wave">👋</span></h1>
+                <p class="subtitle">Your Personal Reading Platform</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <div id="fileInfo" class="file-info hidden">
+                <span class="file-icon">📄</span>
+                <span id="fileName">No file loaded</span>
+            </div>
+            <button id="changePdfBtn" class="btn-secondary hidden">Change PDF</button>
+            <button id="changeKeyBtn" class="btn-ghost" title="Edit Profile">⚙️ Profile</button>
+        </div>
+    </header>
+
+    <!-- Main 3-Panel Layout -->
+    <main class="panels-container">
+
+        <!-- PANEL 1: PDF VIEWER -->
+        <section class="panel panel-pdf" id="pdfPanel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span class="panel-icon">📄</span>
+                    <span>PDF Viewer</span>
+                </div>
+                <div class="pdf-controls hidden" id="pdfControls">
+                    <button id="prevPage" class="icon-btn" title="Previous page">&#8249;</button>
+                    <span id="pageInfo" class="page-info">Page 1 of 1</span>
+                    <button id="nextPage" class="icon-btn" title="Next page">&#8250;</button>
+                    <button id="zoomOut" class="icon-btn" title="Zoom out">&#8722;</button>
+                    <span id="zoomLevel" class="page-info">100%</span>
+                    <button id="zoomIn" class="icon-btn" title="Zoom in">&#43;</button>
+                </div>
+            </div>
+
+            <!-- Upload Zone -->
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📂</div>
+                <p class="upload-title">Drop your PDF here</p>
+                <p class="upload-sub">or click to browse</p>
+                <button class="btn-primary upload-btn" id="uploadBtn">Browse Files</button>
+                <input type="file" id="fileInput" accept=".pdf" hidden />
+            </div>
+
+            <!-- PDF Canvas Wrapper -->
+            <div class="pdf-viewer-wrapper hidden" id="pdfViewerWrapper">
+                <div id="pdfCanvasContainer" class="pdf-canvas-container"></div>
+            </div>
+        </section>
+
+        <!-- PANEL 2: AI QUESTIONS -->
+        <section class="panel panel-questions" id="questionsPanel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span class="panel-icon">🧠</span>
+                    <span>AI Questions</span>
+                </div>
+                <button class="btn-accent" id="newQuestionsBtn" title="Generate new questions">
+                    <span id="newQBtnIcon">✨</span> New Questions
+                </button>
+            </div>
+
+            <div class="questions-body" id="questionsBody">
+                <div class="empty-state" id="questionsEmpty">
+                    <div class="empty-icon">🤔</div>
+                    <p>Upload a PDF to generate<br />AI-powered questions</p>
+                </div>
+                <div class="loading-state hidden" id="questionsLoading">
+                    <div class="spinner"></div>
+                    <p>Grok is crafting 40 questions<br />from your document…</p>
+                </div>
+                <ol class="questions-list hidden" id="questionsList"></ol>
+            </div>
+        </section>
+
+        <!-- PANEL 3: AI CHAT -->
+        <section class="panel panel-chat" id="chatPanel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span class="panel-icon">💬</span>
+                    <span>Ask Grok</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="chat-badge">PDF Context</span>
+                    <button id="collapseChatBtn" class="icon-btn collapse-btn"
+                        title="Collapse chat panel">&#x276F;</button>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-welcome">
+                    <div class="chat-avatar">🤖</div>
+                    <div class="chat-bubble bot-bubble">
+                        Hi Danny! Upload a PDF and I'll answer any questions about it. I only answer based on what's in
+                        your document.
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="chat-input-wrapper">
+                    <textarea id="chatInput" class="chat-input" placeholder="Ask a question about your PDF…"
+                        rows="1"></textarea>
+                    <button id="sendChat" class="send-btn" title="Send">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <p class="chat-note">Answers are based solely on the uploaded PDF</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Expand Chat Tab (shown when chat is collapsed) -->
+    <button id="expandChatTab" title="Expand chat panel">💬 Ask Grok</button>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
